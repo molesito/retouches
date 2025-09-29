@@ -21,12 +21,12 @@ app = Flask(__name__)
 def aplicar_bordes_negros_tabla(table, ancho_octavos_pt: int = 8, color_hex: str = "000000") -> None:
     """
     Aplica bordes negros de línea simple a la tabla (externos e internos).
-    ancho_octavos_pt: ancho en octavos de punto (8 ~= 1 pt)
     """
     tbl = table._tbl
     tblPr = tbl.tblPr
 
-    tblBorders = tblPr.tblBorders
+    # Buscar <w:tblBorders> si ya existe
+    tblBorders = tblPr.find(qn('w:tblBorders'))
     if tblBorders is None:
         tblBorders = OxmlElement('w:tblBorders')
         tblPr.append(tblBorders)
@@ -39,7 +39,7 @@ def aplicar_bordes_negros_tabla(table, ancho_octavos_pt: int = 8, color_hex: str
         el.set(qn('w:color'), color_hex)
         return el
 
-    # Establecer los 6 bordes (4 externos + 2 internos)
+    # Limpiar existentes y establecer los seis bordes
     for tag in ['top', 'left', 'bottom', 'right', 'insideH', 'insideV']:
         previo = tblBorders.find(qn(f'w:{tag}'))
         if previo is not None:
@@ -64,10 +64,15 @@ def eliminar_repeticion_fila_encabezado(table) -> None:
             trPr.remove(child)
 
 def procesar_docx(stream_entrada: BytesIO) -> BytesIO:
+    """
+    Procesa el DOCX en memoria, aplicando bordes y quitando repetición.
+    Devuelve un BytesIO con el DOCX resultante.
+    """
     doc = Document(stream_entrada)
     for table in doc.tables:
         aplicar_bordes_negros_tabla(table)
         eliminar_repeticion_fila_encabezado(table)
+
     salida = BytesIO()
     doc.save(salida)
     salida.seek(0)
@@ -93,7 +98,7 @@ def process():
             # 2) cuerpo binario crudo
             in_bytes = request.get_data(cache=False)
             if not in_bytes:
-                return jsonify({"error": "No se recibió archivo. Use multipart con campo 'file' o envíe el cuerpo binario crudo del .docx."}), 400
+                return jsonify({"error": "No se recibió archivo"}), 400
 
         entrada = BytesIO(in_bytes)
         salida = procesar_docx(entrada)
@@ -112,5 +117,6 @@ def process():
         return jsonify({"error": str(e)}), 500
 
 if __name__ == '__main__':
-    # Pruebas locales: python app.py  ->  http://localhost:5000/health
+    # Para pruebas locales: python main.py
+    # Luego visitar: http://localhost:5000/health
     app.run(host='0.0.0.0', port=5000, debug=False)

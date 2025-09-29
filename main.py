@@ -118,5 +118,6 @@ def process():
 
 if __name__ == '__main__':
     # Para pruebas locales: python main.py
-    # Luego visitar: http://localhost:5000/health
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    # Luego visitar: http://localhost:5432/health
+    app.run(host='0.0.0.0', port=5432, debug=False)
+
